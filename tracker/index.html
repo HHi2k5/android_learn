@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lộ trình Android → Automotive</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --text: #17202a; --muted: #637083; --line: #e1e6ec;
+    --accent: #0b7a5c; --accent-soft: #dff3ec; --late: #b3391f; --late-soft: #fbe6e0;
+    --info: #24598f; --info-soft: #e1edf9; --track: #e7ebf0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11161c; --card: #1a212a; --text: #e6ebf1; --muted: #93a0b0; --line: #2a333f;
+      --accent: #3fc79c; --accent-soft: #163a30; --late: #ff8f73; --late-soft: #42201a;
+      --info: #7fb6ee; --info-soft: #172c42; --track: #28313c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 860px; margin: 0 auto; padding: 12px 16px 0; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 17px; margin: 0; flex: 1; min-width: 200px; }
+  nav { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; }
+  nav button { background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted);
+    padding: 8px 12px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  nav button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  main { max-width: 860px; margin: 0 auto; padding: 16px 16px 60px; display: grid; gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .spread { justify-content: space-between; }
+  .chip { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .chip.ok { background: var(--accent-soft); color: var(--accent); }
+  .chip.late { background: var(--late-soft); color: var(--late); }
+  .chip.info { background: var(--info-soft); color: var(--info); }
+  .big { font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .progress { height: 8px; background: var(--track); border-radius: 99px; overflow: hidden; }
+  .progress > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+  ul.items { list-style: none; margin: 0; padding: 0; }
+  ul.items li { border-top: 1px solid var(--line); }
+  ul.items li:first-child { border-top: 0; }
+  ul.items label { display: flex; gap: 10px; padding: 8px 0; cursor: pointer; align-items: flex-start; }
+  ul.items input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+  ul.items .done { color: var(--muted); text-decoration: line-through; }
+  .where { display: block; font-size: 12px; color: var(--muted); }
+  .where.late { color: var(--late); }
+  code { background: var(--track); padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+  button.btn, input, textarea { font: inherit; color: inherit; }
+  button.btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 7px 14px;
+    font-weight: 600; cursor: pointer; }
+  @media (prefers-color-scheme: dark) { button.btn { color: #0c1a15; } }
+  button.btn.ghost { background: none; color: var(--accent); border: 1px solid var(--line); }
+  input[type=date], input[type=number], textarea { background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 8px; }
+  input[type=number] { width: 80px; }
+  textarea { width: 100%; min-height: 56px; resize: vertical; display: block; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; height: 110px; margin: 12px 0 4px; }
+  .day { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px;
+    background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--muted); font-size: 12px; min-width: 0; }
+  .day .col { width: 100%; max-width: 46px; background: var(--track); border-radius: 6px 6px 2px 2px; min-height: 3px; }
+  .day.has .col { background: var(--accent); }
+  .day.sel { color: var(--text); font-weight: 700; }
+  .day.sel .col { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .day .val { color: var(--text); font-size: 12px; }
+  details.stage { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  details.stage > summary { list-style: none; cursor: pointer; padding: 14px 16px; }
+  details.stage > summary::-webkit-details-marker { display: none; }
+  .stage-body { padding: 0 16px 12px; }
+  .group { border-top: 1px solid var(--line); padding: 12px 0 4px; }
+  .group h3 { font-size: 14px; margin: 0 0 4px; }
+  .note { font-size: 13px; color: var(--muted); margin: 6px 0 6px 27px; }
+  .field { margin-top: 10px; }
+  .field > span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text);
+    color: var(--bg); padding: 8px 16px; border-radius: 99px; font-size: 14px; opacity: 0; pointer-events: none;
+    transition: opacity .2s; max-width: 90vw; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="top">
+      <h1>Lộ trình Android → Automotive</h1>
+      <span id="headStatus"></span>
+    </div>
+    <nav id="tabs">
+      <button data-tab="today">Hôm nay</button>
+      <button data-tab="roadmap">Lộ trình</button>
+      <button data-tab="journal">Nhật ký &amp; giờ học</button>
+    </nav>
+  </div>
+</header>
+<main id="view"><p class="muted">Đang tải…</p></main>
+<div id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const view = $('#view');
+let S = null;
+let tab = 'today';
+let openStages = null;      // các giai đoạn đang mở ở tab Lộ trình
+let selDate = null;         // ngày đang chọn để ghi giờ
+const dirty = new Set();    // tuần nhật ký đang sửa dở
+try { tab = localStorage.getItem('tab') || 'today'; } catch {}
+
+// ---------- tiện ích ----------
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
+const pad = (n) => String(n).padStart(2, '0');
+const toDate = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const ymd = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+const today = () => { const n = new Date(); return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`; };
+const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return ymd(d); };
+const diffDays = (a, b) => Math.round((toDate(a) - toDate(b)) / 864e5);
+const monday = (s) => addDays(s, -((toDate(s).getUTCDay() + 6) % 7));
+const dm = (s) => { const p = s.split('-'); return `${p[2]}/${p[1]}`; };
+const fmtH = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
+const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+const DOW = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function api(path, body) {
+  const r = await fetch(path, body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : undefined);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `Lỗi ${r.status}`);
+  return j;
+}
+
+async function load() {
+  try { S = await api('/api/state'); render(); }
+  catch (e) { view.innerHTML = `<div class="card">Không tải được dữ liệu: ${esc(e.message)}</div>`; }
+}
+
+async function post(path, body, okMsg) {
+  try {
+    S = await api(path, body);
+    if (okMsg) toast(okMsg);
+    render();
+    return true;
+  } catch (e) {
+    toast(e.message);
+    await load();
+    return false;
+  }
+}
+
+// ---------- tính toán ----------
+// Lịch kế hoạch: "tuần 0" (cài đặt) = 3 ngày đầu, sau đó mỗi tuần 7 ngày.
+function weekRange(n) {
+  const s = S.data.startDate;
+  if (!s) return null;
+  if (n === 0) return [s, addDays(s, 2)];
+  const a = addDays(s, 3 + 7 * (n - 1));
+  return [a, addDays(a, 6)];
+}
+
+function derive() {
+  const req = [];
+  for (const st of S.roadmap.stages) {
+    if (st.optional) continue;
+    for (const g of st.groups) for (const it of g.items) req.push({ ...it, stage: st, group: g });
+  }
+  const t = today();
+  const start = S.data.startDate;
+  let planWeek = null;
+  if (start) {
+    const d = diffDays(t, start);
+    planWeek = d < 0 ? -1 : d < 3 ? 0 : Math.floor((d - 3) / 7) + 1;
+  }
+  const next = req.filter((i) => !i.checked);
+  const maxWeek = Math.max(0, ...req.map((i) => (i.week ? i.week.to : 0)));
+  const overdue = next.filter(isOverdue).length;
+  return { req, next, done: req.length - next.length, planWeek, maxWeek, overdue, t, start };
+}
+
+function isOverdue(it) {
+  if (it.checked || !it.week || !S.data.startDate) return false;
+  return today() > weekRange(it.week.to)[1];
+}
+
+function status(D) {
+  if (!D.next.length) return { cls: 'ok', text: 'Đã xong lộ trình chính' };
+  if (D.planWeek === null) return null;
+  if (D.planWeek < 0) return { cls: 'info', text: `Bắt đầu sau ${diffDays(D.start, D.t)} ngày` };
+  const w = D.next[0].week;
+  if (!w) return null;
+  if (D.planWeek > w.to) return { cls: 'late', text: `Chậm ${D.planWeek - w.to} tuần` };
+  if (D.planWeek < w.from) return { cls: 'ok', text: `Nhanh ${w.from - D.planWeek} tuần` };
+  return { cls: 'ok', text: 'Đúng tiến độ' };
+}
+
+const weekLabel = (w) => (!w ? '' : w.from === 0 ? 'Tuần 0' : w.from === w.to ? `Tuần ${w.from}` : `Tuần ${w.from}–${w.to}`);
+
+function weekDates(w) {
+  if (!w || !S.data.startDate) return '';
+  return `${dm(weekRange(w.from)[0])} – ${dm(weekRange(w.to)[1])}`;
+}
+
+const hoursOf = (d) => S.data.hours[d] || 0;
+const weekHours = (mon) => [0, 1, 2, 3, 4, 5, 6].reduce((s, i) => s + hoursOf(addDays(mon, i)), 0);
+
+function streak() {
+  let d = today();
+  if (!hoursOf(d)) d = addDays(d, -1);
+  let n = 0;
+  while (hoursOf(d)) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+// ---------- hiển thị ----------
+function itemRow(it, where) {
+  const late = isOverdue(it);
+  const sub = where
+    ? `<span class="where${late ? ' late' : ''}">${esc(where)}${late ? ' · quá hạn' : ''}</span>`
+    : '';
+  return `<li><label>
+    <input type="checkbox" data-line="${it.line}" data-text="${esc(it.text)}"${it.checked ? ' checked' : ''}>
+    <span><span class="${it.checked ? 'done' : ''}">${md(it.text)}</span>${sub}</span>
+  </label></li>`;
+}
+
+function renderToday(D) {
+  const st = status(D);
+  const tgt = S.data.weeklyTarget;
+  let plan;
+  if (!D.start) {
+    plan = `<div class="big">Chưa đặt ngày bắt đầu</div>
+      <p class="muted">Đặt ngày bắt đầu để app biết hôm nay bạn đang ở tuần mấy của kế hoạch 30 tuần.</p>
+      <div class="row"><input type="date" id="startInput" value="${D.t}">
+      <button class="btn" data-act="setStart">Bắt đầu</button></div>`;
+  } else {
+    const wk = D.planWeek < 0 ? 'Chưa đến ngày bắt đầu'
+      : D.planWeek === 0 ? 'Tuần 0 · cài đặt môi trường'
+      : D.planWeek > D.maxWeek ? `Đã qua tuần ${D.maxWeek} của kế hoạch`
+      : `Tuần ${D.planWeek} / ${D.maxWeek} theo kế hoạch`;
+    const range = D.planWeek >= 0 && D.planWeek <= D.maxWeek ? weekRange(D.planWeek) : null;
+    plan = `<div class="row spread"><div class="big">${wk}</div>${st ? `<span class="chip ${st.cls}">${st.text}</span>` : ''}</div>
+      <p class="muted small">${range ? `${dm(range[0])} – ${dm(range[1])} · ` : ''}Bắt đầu ${dm(D.start)}/${D.start.slice(0, 4)}${D.overdue ? ` · <span style="color:var(--late)">${D.overdue} mục quá hạn</span>` : ''}</p>`;
+  }
+
+  const nextItems = D.next.slice(0, 5);
+  const nextHtml = nextItems.length
+    ? `<ul class="items">${nextItems.map((it) => itemRow(it, `Giai đoạn ${it.stage.n} · ${it.group.title || it.stage.title}`)).join('')}</ul>`
+    : '<p class="muted">Bạn đã tick hết lộ trình chính. Xem Giai đoạn 8 (nâng cao) ở tab Lộ trình.</p>';
+
+  // giờ học tuần này
+  const mon = monday(D.t);
+  if (!selDate) selDate = D.t;
+  const total = weekHours(mon);
+  const maxH = Math.max(3, ...[0, 1, 2, 3, 4, 5, 6].map((i) => hoursOf(addDays(mon, i))));
+  const days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
+    const d = addDays(mon, i), h = hoursOf(d);
+    return `<button class="day${h ? ' has' : ''}${d === selDate ? ' sel' : ''}" data-act="pickDay" data-date="${d}" title="${dm(d)}">
+      <span class="val">${h ? fmtH(h) : ''}</span>
+      <span class="col" style="height:${Math.round((h / maxH) * 64)}px"></span>
+      <span>${DOW[i]}${d === D.t ? ' •' : ''}</span></button>`;
+  }).join('');
+  const sk = streak();
+
+  // nhắc nhật ký tuần trước
+  const lastMon = addDays(mon, -7);
+  const began = D.start && D.start <= addDays(lastMon, 6);
+  const remind = began && !S.data.journal[lastMon]
+    ? `<div class="card row spread"><span>Bạn chưa viết nhật ký cho tuần ${dm(lastMon)} – ${dm(addDays(lastMon, 6))}.</span>
+       <button class="btn ghost" data-act="goJournal">Viết 3 dòng</button></div>`
+    : '';
+
+  return `
+    <div class="card">${plan}
+      <div class="progress" style="margin-top:10px"><i style="width:${pct(D.done, D.req.length)}%"></i></div>
+      <p class="muted small" style="margin:6px 0 0">${D.done}/${D.req.length} mục · ${pct(D.done, D.req.length)}% lộ trình chính</p>
+    </div>
+    ${remind}
+    <div class="card">
+      <div class="row spread"><h2>Việc tiếp theo</h2><button class="btn ghost" data-act="goRoadmap">Xem cả lộ trình</button></div>
+      ${nextHtml}
+    </div>
+    <div class="card">
+      <div class="row spread"><h2>Giờ học tuần này</h2>
+        <span class="chip ${total >= tgt[0] ? 'ok' : 'info'}">${fmtH(total)} / ${tgt[0]}–${tgt[1]} giờ</span></div>
+      <div class="progress"><i style="width:${Math.min(100, pct(total, tgt[0]))}%"></i></div>
+      <div class="days">${days}</div>
+      <div class="row" style="margin-top:12px">
+        <input type="date" id="hDate" value="${selDate}" max="${D.t}">
+        <input type="number" id="hVal" min="0" max="24" step="0.25" value="${hoursOf(selDate) || ''}" placeholder="giờ">
+        <button class="btn" data-act="saveHours">Lưu</button>
+        <button class="btn ghost" data-act="addHours" data-add="0.5">+30 phút</button>
+        <button class="btn ghost" data-act="addHours" data-add="1">+1 giờ</button>
+      </div>
+      <p class="muted small" style="margin:10px 0 0">${sk ? `Chuỗi học liên tục: <strong>${sk} ngày</strong>` : 'Chưa có chuỗi ngày học — ghi giờ hôm nay để bắt đầu.'}</p>
+    </div>
+    ${D.start ? `<p class="muted small row">Ngày bắt đầu: <input type="date" id="startInput" value="${D.start}">
+      <button class="btn ghost" data-act="setStart">Đổi</button></p>` : ''}`;
+}
+
+function renderRoadmap(D) {
+  if (!openStages) {
+    openStages = new Set([D.next.length ? D.next[0].stage.n : S.roadmap.stages[0].n]);
+  }
+  return S.roadmap.stages.map((st) => {
+    const items = st.groups.flatMap((g) => g.items);
+    const done = items.filter((i) => i.checked).length;
+    const groups = st.groups.map((g) => {
+      const w = g.items[0].week;
+      const sameWeek = g.items.every((i) => weekLabel(i.week) === weekLabel(w));
+      const late = g.items.some(isOverdue);
+      const dates = sameWeek ? weekDates(w) : '';
+      const head = g.title || dates
+        ? `<div class="row spread"><h3>${md(g.title)}</h3>
+           ${dates ? `<span class="chip ${late ? 'late' : 'info'}">${dates}${late ? ' · quá hạn' : ''}</span>` : ''}</div>`
+        : '';
+      return `<div class="group">${head}
+        <ul class="items">${g.items.map((it) => itemRow(it, sameWeek ? '' : weekDates(it.week))).join('')}</ul>
+        ${g.notes.map((n) => `<p class="note">${md(n)}</p>`).join('')}</div>`;
+    }).join('');
+    return `<details class="stage" data-stage="${st.n}"${openStages.has(st.n) ? ' open' : ''}>
+      <summary>
+        <div class="row spread"><strong>Giai đoạn ${st.n} — ${esc(st.title)}</strong>
+          <span class="chip ${done === items.length ? 'ok' : 'info'}">${done}/${items.length}</span></div>
+        <div class="muted small">${esc(st.duration)}</div>
+        <div class="progress" style="margin-top:8px"><i style="width:${pct(done, items.length)}%"></i></div>
+      </summary>
+      <div class="stage-body">${groups}</div>
+    </details>`;
+  }).join('');
+}
+
+function renderJournal(D) {
+  const cur = monday(D.t);
+  const keys = [cur, ...Object.keys(S.data.hours), ...Object.keys(S.data.journal)];
+  if (D.start) keys.push(D.start);
+  let first = monday(keys.reduce((a, b) => (a < b ? a : b)));
+  if (diffDays(cur, first) > 7 * 60) first = addDays(cur, -7 * 60);
+  const tgt = S.data.weeklyTarget;
+  let html = '';
+  for (let mon = cur; mon >= first; mon = addDays(mon, -7)) {
+    const j = S.data.journal[mon] || {};
+    const h = weekHours(mon);
+    const f = (key, label) => `<label class="field"><span>${label}</span>
+      <textarea data-week="${mon}" data-f="${key}">${esc(j[key] || '')}</textarea></label>`;
+    html += `<div class="card" data-jweek="${mon}">
+      <div class="row spread"><h2>Tuần ${dm(mon)} – ${dm(addDays(mon, 6))}${mon === cur ? ' (tuần này)' : ''}</h2>
+        <span class="chip ${h >= tgt[0] ? 'ok' : 'info'}">${fmtH(h)} giờ học</span></div>
+      ${f('learned', 'Đã học gì')}${f('stuck', 'Vướng gì')}${f('next', 'Tuần sau làm gì')}
+      <div class="row" style="margin-top:10px"><button class="btn" data-act="saveJournal" data-week="${mon}">Lưu nhật ký</button></div>
+    </div>`;
+  }
+  return html;
+}
+
+function render() {
+  if (!S) return;
+  const D = derive();
+  const st = status(D);
+  $('#headStatus').innerHTML = `<span class="muted small">${pct(D.done, D.req.length)}%</span> ${st ? `<span class="chip ${st.cls}">${st.text}</span>` : ''}`;
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+  view.innerHTML = tab === 'roadmap' ? renderRoadmap(D) : tab === 'journal' ? renderJournal(D) : renderToday(D);
+}
+
+function setTab(t) {
+  tab = t;
+  try { localStorage.setItem('tab', t); } catch {}
+  render();
+  window.scrollTo(0, 0);
+}
+
+// ---------- sự kiện ----------
+$('#tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]');
+  if (b) setTab(b.dataset.tab);
+});
+
+view.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.matches('input[type=checkbox][data-line]')) {
+    el.disabled = true;
+    post('/api/toggle', { line: +el.dataset.line, text: el.dataset.text, checked: el.checked });
+  } else if (el.id === 'hDate' && el.value) {
+    selDate = el.value;
+    render();
+  }
+});
+
+view.addEventListener('input', (e) => {
+  if (e.target.matches('textarea[data-week]')) dirty.add(e.target.dataset.week);
+});
+
+view.addEventListener('toggle', (e) => {
+  const d = e.target;
+  if (!d.matches || !d.matches('details.stage') || !openStages) return;
+  const n = +d.dataset.stage;
+  if (d.open) openStages.add(n); else openStages.delete(n);
+}, true);
+
+view.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'goRoadmap') setTab('roadmap');
+  else if (act === 'goJournal') setTab('journal');
+  else if (act === 'pickDay') { selDate = b.dataset.date; render(); }
+  else if (act === 'setStart') {
+    const v = $('#startInput').value;
+    if (v) post('/api/settings', { startDate: v }, 'Đã lưu ngày bắt đầu');
+  } else if (act === 'saveHours') {
+    const v = $('#hVal').value;
+    post('/api/hours', { date: selDate, hours: v === '' ? 0 : Number(v) }, 'Đã lưu giờ học');
+  } else if (act === 'addHours') {
+    post('/api/hours', { date: selDate, hours: hoursOf(selDate) + Number(b.dataset.add) }, 'Đã cộng giờ học');
+  } else if (act === 'saveJournal') {
+    const w = b.dataset.week;
+    const val = (f) => view.querySelector(`textarea[data-week="${w}"][data-f="${f}"]`).value;
+    const body = { week: w, learned: val('learned'), stuck: val('stuck'), next: val('next') };
+    // Giữ lại chữ đang gõ dở ở các tuần khác khi vẽ lại.
+    const drafts = [...view.querySelectorAll('textarea[data-week]')]
+      .filter((t) => t.dataset.week !== w && dirty.has(t.dataset.week))
+      .map((t) => [t.dataset.week, t.dataset.f, t.value]);
+    post('/api/journal', body, 'Đã lưu nhật ký').then((ok) => {
+      if (ok) dirty.delete(w);
+      for (const [dw, f, v] of drafts) {
+        const t = view.querySelector(`textarea[data-week="${dw}"][data-f="${f}"]`);
+        if (t) t.value = v;
+      }
+    });
+  }
+});
+
+// Quay lại tab trình duyệt thì đọc lại file (phòng khi sửa LO_TRINH.md bằng tay).
+window.addEventListener('focus', () => { if (!dirty.size) load(); });
+window.addEventListener('beforeunload', (e) => { if (dirty.size) e.preventDefault(); });
+
+load();
+</script>
+</body>
+</html>
