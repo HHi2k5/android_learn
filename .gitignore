@@ -1,0 +1,23 @@
+# Gradle / Kotlin build output
+.gradle/
+.kotlin/
+build/
+bin/
+out/
+
+# Java
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Android
+local.properties
+*.apk
+*.aab
+
+# OS
+Thumbs.db
+.DS_Store
