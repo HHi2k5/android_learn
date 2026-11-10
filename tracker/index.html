@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lộ trình Android → Automotive</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%230b7a5c'/%3E%3Cpath d='M17 33l11 11 19-23' fill='none' stroke='%23fff' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #f4f6f8; --card: #ffffff; --text: #17202a; --muted: #637083; --line: #e1e6ec;
@@ -43,13 +44,19 @@
   .progress { height: 8px; background: var(--track); border-radius: 99px; overflow: hidden; }
   .progress > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
   ul.items { list-style: none; margin: 0; padding: 0; }
-  ul.items li { border-top: 1px solid var(--line); }
-  ul.items li:first-child { border-top: 0; }
+  ul.items > li { border-top: 1px solid var(--line); }
+  ul.items > li:first-child { border-top: 0; }
   ul.items label { display: flex; gap: 10px; padding: 8px 0; cursor: pointer; align-items: flex-start; }
   ul.items input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
   ul.items .done { color: var(--muted); text-decoration: line-through; }
   .where { display: block; font-size: 12px; color: var(--muted); }
   .where.late { color: var(--late); }
+  details.more { margin: -2px 0 8px 27px; font-size: 13.5px; }
+  details.more > summary { cursor: pointer; color: var(--info); font-size: 13px; font-weight: 600;
+    width: fit-content; user-select: none; }
+  details.more ul { margin: 6px 0 2px; padding-left: 18px; color: var(--muted); }
+  details.more li { border: 0; padding: 2px 0; }
+  details.more li strong { color: var(--text); }
   code { background: var(--track); padding: 1px 5px; border-radius: 5px; font-size: 13px; }
   button.btn, input, textarea { font: inherit; color: inherit; }
   button.btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 7px 14px;
@@ -106,6 +113,7 @@ const view = $('#view');
 let S = null;
 let tab = 'today';
 let openStages = null;      // các giai đoạn đang mở ở tab Lộ trình
+let openDetails = null;     // các task đang mở phần chi tiết (theo số dòng trong LO_TRINH.md)
 let selDate = null;         // ngày đang chọn để ghi giờ
 const dirty = new Set();    // tuần nhật ký đang sửa dở
 try { tab = localStorage.getItem('tab') || 'today'; } catch {}
@@ -229,10 +237,16 @@ function itemRow(it, where) {
   const sub = where
     ? `<span class="where${late ? ' late' : ''}">${esc(where)}${late ? ' · quá hạn' : ''}</span>`
     : '';
+  const more = it.details && it.details.length
+    ? `<details class="more" data-line="${it.line}"${openDetails.has(it.line) ? ' open' : ''}>
+        <summary>Chi tiết (${it.details.length})</summary>
+        <ul>${it.details.map((d) => `<li>${md(d)}</li>`).join('')}</ul>
+      </details>`
+    : '';
   return `<li><label>
     <input type="checkbox" data-line="${it.line}" data-text="${esc(it.text)}"${it.checked ? ' checked' : ''}>
     <span><span class="${it.checked ? 'done' : ''}">${md(it.text)}</span>${sub}</span>
-  </label></li>`;
+  </label>${more}</li>`;
 }
 
 function renderToday(D) {
@@ -368,6 +382,8 @@ function render() {
   if (!S) return;
   const D = derive();
   const st = status(D);
+  // Lần đầu: mở sẵn chi tiết của việc tiếp theo.
+  if (!openDetails) openDetails = new Set(D.next.length ? [D.next[0].line] : []);
   $('#headStatus').innerHTML = `<span class="muted small">${pct(D.done, D.req.length)}%</span> ${st ? `<span class="chip ${st.cls}">${st.text}</span>` : ''}`;
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   view.innerHTML = tab === 'roadmap' ? renderRoadmap(D) : tab === 'journal' ? renderJournal(D) : renderToday(D);
@@ -403,6 +419,11 @@ view.addEventListener('input', (e) => {
 
 view.addEventListener('toggle', (e) => {
   const d = e.target;
+  if (d.matches && d.matches('details.more') && openDetails) {
+    const line = +d.dataset.line;
+    if (d.open) openDetails.add(line); else openDetails.delete(line);
+    return;
+  }
   if (!d.matches || !d.matches('details.stage') || !openStages) return;
   const n = +d.dataset.stage;
   if (d.open) openStages.add(n); else openStages.delete(n);

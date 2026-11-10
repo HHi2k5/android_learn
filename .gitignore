@@ -18,6 +18,9 @@ local.properties
 *.apk
 *.aab
 
+# Tracker app (hồ sơ trình duyệt riêng của cửa sổ app)
+tracker/.app-profile/
+
 # OS
 Thumbs.db
 .DS_Store

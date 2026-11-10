@@ -35,8 +35,10 @@ function parseRoadmap(text) {
   let stage = null;
   let group = null;
   let lastWeek = null;
+  let item = null; // mục [ ] gần nhất — các gạch đầu dòng thụt vào bên dưới là chi tiết của nó
 
   const newGroup = (name) => {
+    item = null;
     group = { title: name, week: weekOf(name, false), items: [], notes: [] };
     if (group.week) lastWeek = group.week;
     stage.groups.push(group);
@@ -81,17 +83,22 @@ function parseRoadmap(text) {
       const text = m[4];
       const own = weekOf(text, true);
       if (own) lastWeek = own;
-      group.items.push({
+      item = {
         line: i,
         text,
         checked: m[2] !== ' ',
         week: own || group.week || lastWeek,
-      });
+        details: [],
+      };
+      group.items.push(item);
       return;
     }
-    if (group && (m = /^\s*-\s+(.+)$/.exec(line))) {
-      group.notes.push(m[1]);
+    if (group && (m = /^(\s*)-\s+(.+)$/.exec(line))) {
+      if (m[1] && item) item.details.push(m[2]);
+      else group.notes.push(m[2]);
+      return;
     }
+    if (line.trim()) item = null;
   });
 
   for (const s of stages) s.groups = s.groups.filter((g) => g.items.length);
